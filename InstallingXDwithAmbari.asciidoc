@@ -5,7 +5,7 @@ IMPORTANT: This is still a work-in-progress and these packages have not yet been
 
 ==== Copying and installing Spring XD files
 
-Copy the `SPRINGXD.tar` and `springxd-plugin-phd-1.0-1.noarch.rpm` files to the YUM repository server machine. I'm copying the files to a directory named `/staging`.
+Copy the `SPRINGXD.tar` file to the YUM repository machine. I'm copying the file to a directory named `/staging`.
 
 Then unpack the `SPRINGXD.tar` file and create a symbolic link for YUM repository using:
 
@@ -23,7 +23,9 @@ Alternatively you can unpack the archive directly to the `/var/www/html/` direct
 ----
 
 
-Install the Ambari plugin by installing the RPM package:
+Copy the `springxd-plugin-phd-1.0-1.noarch.rpm` file to the Ambari server machine. I'm copying the file to a directory named `/staging`. 
+
+Then install the Ambari plugin by installing the RPM package:
 
 [source]
 ----
@@ -41,7 +43,7 @@ We now need to restart the Ambari server to pick up this new plugin:
 
 We need to have a transport installed. Spring XD currently supports Redis and Kafka for the Ambari installation. I'll use Redis since that seems simpler.
 
-You can build Redis from source or you can use RPMs that are available from the link:https://fedoraproject.org/wiki/EPEL[EPEL] project. I'm using the RPM packages. Source is available in the `/opt/pivotal/spring-xd/redis` directory.
+You can build Redis from source or you can use RPMs that are available from the link:https://fedoraproject.org/wiki/EPEL[EPEL] project. I'm using the RPM packages. Source is available from the link:http://redis.io/download[Redis download] page. Redis source will also be installed in the `/opt/pivotal/spring-xd/redis` directory.
 
 We need to add a Fedora YUM repo for Redis and then install it:
 
@@ -90,7 +92,7 @@ For "Advanced springxd-site" enter the following:
 |=====================================
 |hsql.server.port            | 9101
 |server.port                 | 9393
-|spring.redis.host           | <your VM hostname>
+|spring.redis.host           | <hostname where redis is running>
 |spring.redis.port           | 6379
 |xd.messagebus.kafka.brokers | 
 |xd.transport                | redis
