@@ -1,6 +1,8 @@
 Installing Spring XD using Ambari
 =================================
 
+These instructions apply to an installation using link:http://pivotalhd.docs.pivotal.io/docs/install-ambari.html[Pivotal Ambari]. For instructions to set up a single-node VM using Pivotal Ambari and Pivotal HD 3.0 see link:InstallingPHDwithAmbari.asciidoc[Installing Pivotal HD 3.0 on single-node VM using Ambari]
+
 IMPORTANT: This is still a work-in-progress and these packages have not yet been released.
 
 ==== Copying and installing Spring XD files
