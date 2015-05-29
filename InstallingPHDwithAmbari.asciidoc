@@ -1,8 +1,7 @@
 Installing Pivotal HD 3.0 on single-node VM using Ambari
 ========================================================
 
-Preparations
-------------
+== Preparations
 
 First we need a VM to work with. I'm using VirtualBox but VMware would work as well.
 
@@ -16,13 +15,15 @@ Once you have VirtualBox installed and up and running we can create our virtual 
 
 You can download the Centos 6.5 64-bit ISO from one of the mirrors at link:http://mirror.centos.org/centos/6/isos/x86_64/[http://mirror.centos.org/centos/6/isos/x86_64/].
 
-Create a new VM with 8GB of memory and 60GB of disk space if you have this available. You can try allocating only 4GB of memory if you are low on resources. Before starting the VM, attach the Live CD image you downloaded to the CD/DVD drive ov the new VM. You should also create two network adapters, "Adapter 1" set to "Host-only Adapter" and "Adapter 2" using "NAT" (If you haven't already created a "Host-only Network", you should do that first, under the VirtualBox Preferences Network tab). 
+Create a new VM with 8GB of memory and 60GB of disk space if you have this available. You can try allocating only 4GB of memory if you are low on resources. Before starting the VM, attach the Live CD image you downloaded to the CD/DVD drive of the new VM. You should also create two network adapters, "Adapter 1" set to "Host-only Adapter" and "Adapter 2" using "NAT" (If you haven't already created a "Host-only Network", you should do that first, under the VirtualBox Preferences Network tab). 
 
 Now, start the VM and install a "Basic Server". Choose a hostname during the install. I picked 'hawaii' as the hostname for my server.
 
 Once the install is complete and you reboot the server you can log in as root.
 
-=== Configure networking
+=== Configure the new VM
+
+==== Configure networking
 
 Log in as root. In a "Basic Server" install the nework adapters aren't enabled by default so we need to do this. Modify the `/etc/sysconfig/network-scripts/ifcfg-eth0` and `/etc/sysconfig/network-scripts/ifcfg-eth1` files. Change the boot setting to `ONBOOT=yes` for both files so the adapters are enabled when we boot. When this is done just enter the `reboot` command. Once you log back in you should see both adapters available when entering the `ifconfig` command. Make note of the IP address of the eth0 interface, we will need that to access the VM from the host machine and we will also use that network for our Ambari configuration.
 
@@ -48,16 +49,9 @@ We'll add eth0 IP address and `hostname` to `\etc\hosts`:
 ----
 
 
-=== Install basic packages we will need
+==== Verify SSH settings
 
-Install OpenSSH and OpenSSL using:
-
-[source]
-----
-# yum -y install openssh-server openssh-clients openssl
-----
-
-Now we should check that the `sshd` service is running and enabled on boot:
+Check that the `sshd` service is running and enabled on boot:
 
 [source]
 ----
@@ -73,7 +67,9 @@ If it is not then run these commands:
 # service sshd start
 ----
 
-Now we can log out and SSH to the server from a host terminal.
+==== Connect with SSH from host machine
+
+Now we can log out and SSH to the server from a terminal on the host machine.
 
 [source]
 ----
@@ -83,6 +79,15 @@ $ ssh root@<ip-for-eth0>
 I prefer to work from a host terminal's SSH session since I can cut-and-paste much easier.
 
 === Preparing for Ambari
+
+==== Update OpenSSL
+
+Update the installed OpenSSL package using:
+
+[source]
+----
+# yum -y update openssl
+----
 
 ==== Set up Password-less SSH 
 
@@ -231,15 +236,15 @@ chkconfig httpd on
 service httpd start
 ----
 
-=== Installing Ambari Server
+== Installing Ambari Server
 
 We can follow steps 2.2 through 2.8 from the link:http://pivotalhd.docs.pivotal.io/docs/install-ambari.html#installing-ambari-server[Pivotal Ambari Installation Guide]
 
-=== Create Hadoop Cluster
+== Create Hadoop Cluster
 
 We can follow steps 3.2 through 3.6 from the link:http://pivotalhd.docs.pivotal.io/docs/install-ambari.html#install-cluster[Pivotal Ambari Installation Guide]
 
-I installed the PHD-3.0.0.0	and PHD-UTILS-1.1.0 stacks.
+I installed the PHD-3.0.0.0 and PHD-UTILS-1.1.0 stacks.
 
 My Repository settings are:
 
@@ -263,4 +268,3 @@ I ignored the warning about `hawaii` not beeing a FQDN.
 For services to install I picked "HDFS", "YARN + MapReduce2", "Nagios", "Ganglia" and "ZooKeeper". Everything ends up on the single node.
 
 You need to set password and alert email for Nagios.
-
