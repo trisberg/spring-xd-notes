@@ -1,37 +1,41 @@
 Installing Spring XD using Ambari
 =================================
 
-These instructions apply to an installation using link:http://pivotalhd.docs.pivotal.io/docs/install-ambari.html[Pivotal Ambari]. For instructions to set up a single-node VM using Pivotal Ambari and Pivotal HD 3.0 see link:InstallingPHDwithAmbari.asciidoc[Installing Pivotal HD 3.0 on single-node VM using Ambari]
+These instructions apply to an installation using link:http://pivotalhd.docs.pivotal.io/docs/install-ambari.html[Pivotal Ambari] as well as link:http://docs.hortonworks.com/HDPDocuments/Ambari-1.7.0.0/Ambari_Doc_Suite/ADS_v170.html[Hortonworks Ambari]. 
+
+For instructions to set up a single-node VM using Pivotal Ambari and Pivotal HD 3.0 see link:InstallingPHDwithAmbari.asciidoc[Installing Pivotal HD 3.0 on single-node VM using Ambari]
+
+For instructions to set up a single-node VM using Hortonworks Ambari and HDP 2.2 see link:InstallingHDPwithAmbari.asciidoc[Installing Hortonworks HDP 2.2 on single-node VM using Ambari]
 
 IMPORTANT: This is still a work-in-progress and these packages have not yet been released.
 
-==== Copying and installing Spring XD files
+=== Copying and installing Spring XD files
 
-Copy the `SPRINGXD.tar` file to the YUM repository machine. I'm copying the file to a directory named `/staging`.
+Copy the `SPRINGXD.tar` file to the YUM repository machine. I'm copying the file to a the `/root` directory.
 
-Then unpack the `SPRINGXD.tar` file and create a symbolic link for YUM repository using:
+NOTE: You should have the web server running on this machine. See link:PreparingVMforAmbari.asciidoc#install-httpd[Install httpd].
 
-[source]
-----
-# tar -xvf /staging/SPRINGXD.tar -C /staging/
-# ln -s /staging/SPRINGXD /var/www/html/SPRINGXD
-----
-
-Alternatively you can unpack the archive directly to the `/var/www/html/` directory:
+Then unpack the `SPRINGXD.tar` file to the `/var/www/html/` directory:
 
 [source]
 ----
-# tar -xvf /staging/SPRINGXD.tar -C /var/www/html/
+# tar -xvf /root/SPRINGXD.tar -C /var/www/html/
 ----
 
+Copy the Spring XD Ambari plug-in file to the Ambari server machine. I'm copying the file to a the `/root` directory.
 
-Copy the `springxd-plugin-phd-1.0-1.noarch.rpm` file to the Ambari server machine. I'm copying the file to a directory named `/staging`. 
-
-Then install the Ambari plugin by installing the RPM package:
+For Pivotal HD copy `springxd-plugin-phd-1.0-1.noarch.rpm` and then install the Ambari plugin by installing the RPM package:
 
 [source]
 ----
-# rpm -ivh /staging/springxd-plugin-phd-1.0-1.noarch.rpm
+# rpm -ivh /root/springxd-plugin-phd-1.0-1.noarch.rpm
+----
+
+For Hortonworks HDP copy `springxd-plugin-hdp-1.0-1.noarch.rpm` and then install the Ambari plugin by installing the RPM package:
+
+[source]
+----
+# rpm -ivh /root/springxd-plugin-hdp-1.0-1.noarch.rpm
 ----
 
 We now need to restart the Ambari server to pick up this new plugin:
@@ -41,11 +45,17 @@ We now need to restart the Ambari server to pick up this new plugin:
 # ambari-server restart
 ----
 
-==== Install a Transport (Redis)
+=== Install a Transport
 
-We need to have a transport installed. Spring XD currently supports Redis and Kafka for the Ambari installation. I'll use Redis since that seems simpler.
+We need to have a transport installed. Spring XD currently supports Redis and Kafka for the Ambari installation. 
 
-You can build Redis from source or you can use RPMs that are available from the link:https://fedoraproject.org/wiki/EPEL[EPEL] project. I'm using the RPM packages. Source is available from the link:http://redis.io/download[Redis download] page. Redis source will also be installed in the `/opt/pivotal/spring-xd/redis` directory.
+==== Using Kafka as Transport
+
+Hortonworks HDP supports Kafka installs using Ambari while Pivotal PHD does not. If you use Hortonworks HDP then you should create a Kafka service using Ambari. If you use Pivotal PHD then you need to install Kafka manually first and provide the connection parameters when you create the Spring XD service. Kafka can be downloaded from the link:http://kafka.apache.org/downloads.html[Kafka download] page.
+
+==== Using Redis as Transport
+
+You can build Redis from source or you can use RPMs that are available from the link:https://fedoraproject.org/wiki/EPEL[EPEL] project. Here we'll use the RPM packages. Source is available from the link:http://redis.io/download[Redis download] page. Redis source will also be installed in the `/opt/pivotal/spring-xd/redis` directory.
 
 We need to add a Fedora YUM repo for Redis and then install it:
 
@@ -82,15 +92,30 @@ We can now test Redis by using:
 PONG
 ----
 
-==== Install Spring XD using Ambari UI
+=== Install Spring XD and create Spring XD service using Ambari UI
 
 Open the Ambari UI and log in as `admin`. From the Dashboard click on "Actions + Add Service" on the left hand side under the list of services. Check "Spring XD" and click `Next ->`. Both master, slave and client will be on the same host since we only have one. Just click `Next ->` a couple of times.
 
-Under "Customize Services" we need to make a few changes:
+==== Customize XD configuration
 
-For "Advanced springxd-site" enter the following:
+Under "Customize Services" we might need to make a few changes in the "Advanced springxd-site" section depending on which transport and distribution we are using.
 
-[width="80%",cols="1m,2m",frame="topbot"]
+.When using Pivotal HD with Kafka:
+************************************************
+[width="95%",cols="1m,3m",frame="topbot"]
+|=====================================
+|hsql.server.port            | 9101
+|server.port                 | 9393
+|spring.redis.host           | 
+|spring.redis.port           | 
+|xd.messagebus.kafka.brokers | <hostname where kafka is running>:<port for kafka:9092>
+|xd.transport                | kafka
+|=====================================
+************************************************
+
+.When using Redis:
+************************************************
+[width="95%",cols="1m,3m",frame="topbot"]
 |=====================================
 |hsql.server.port            | 9101
 |server.port                 | 9393
@@ -99,6 +124,7 @@ For "Advanced springxd-site" enter the following:
 |xd.messagebus.kafka.brokers | 
 |xd.transport                | redis
 |=====================================
+************************************************
 
 Then click `Next ->`.
 
