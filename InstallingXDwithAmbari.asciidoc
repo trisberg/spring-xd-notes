@@ -1,7 +1,7 @@
 Installing Spring XD using Ambari
 =================================
 
-These instructions apply to an installation using link:http://pivotalhd.docs.pivotal.io/docs/install-ambari.html[Pivotal Ambari] as well as link:http://docs.hortonworks.com/HDPDocuments/Ambari-1.7.0.0/Ambari_Doc_Suite/ADS_v170.html[Hortonworks Ambari]. 
+These instructions apply to an installation using link:http://pivotalhd.docs.pivotal.io/docs/install-ambari.html[Pivotal Ambari] as well as link:http://docs.hortonworks.com/HDPDocuments/Ambari-1.7.0.0/Ambari_Doc_Suite/ADS_v170.html[Hortonworks Ambari] using Red Hat Enterprise Linux 6.5 or CentOS 6.5. 
 
 For instructions to set up a single-node VM using Pivotal Ambari and Pivotal HD 3.0 see link:InstallingPHDwithAmbari.asciidoc[Installing Pivotal HD 3.0 on single-node VM using Ambari]
 
@@ -11,31 +11,53 @@ IMPORTANT: This is still a work-in-progress and these packages have not yet been
 
 === Copying and installing Spring XD files
 
-Copy the `SPRINGXD.tar` file to the YUM repository machine. I'm copying the file to a the `/root` directory.
+Copy the `SPRINGXD-1.2-1.tar` file to the YUM repository machine. I'm copying the file to a the `/staging` directory.
+
+If you don't already have a `/staging` directory you can create it using:
+
+[source]
+----
+# mkdir /staging
+# chmod a+rx /staging
+----
 
 NOTE: You should have the web server running on this machine. See link:PreparingVMforAmbari.asciidoc#install-httpd[Install httpd].
 
-Then unpack the `SPRINGXD.tar` file to the `/var/www/html/` directory:
+Then unpack the `SPRINGXD-1.2-1.tar` file to the `/staging` directory:
 
 [source]
 ----
-# tar -xvf /root/SPRINGXD.tar -C /var/www/html/
+# tar -xvf /staging/SPRINGXD-1.2-1.tar -C /staging/
 ----
 
-Copy the Spring XD Ambari plug-in file to the Ambari server machine. I'm copying the file to a the `/root` directory.
-
-For Pivotal HD copy `springxd-plugin-phd-1.0-1.noarch.rpm` and then install the Ambari plugin by installing the RPM package:
+Next we need to install this as a YUM repo using the `setup_repo.sh` script:
 
 [source]
 ----
-# rpm -ivh /root/springxd-plugin-phd-1.0-1.noarch.rpm
+# /staging/SPRINGXD-1.2-1/setup_repo.sh
 ----
 
-For Hortonworks HDP copy `springxd-plugin-hdp-1.0-1.noarch.rpm` and then install the Ambari plugin by installing the RPM package:
+Check that the SPRINGXD YUM repo is available using:
 
 [source]
 ----
-# rpm -ivh /root/springxd-plugin-hdp-1.0-1.noarch.rpm
+# yum repolist
+----
+
+Now we can install the Spring XD Ambari plug-in file to the Ambari server machine using YUM.
+
+For Pivotal HD use:
+
+[source]
+----
+# yum install springxd-plugin-phd
+----
+
+For Hortonworks HDP use:
+
+[source]
+----
+# yum install springxd-plugin-hdp
 ----
 
 We now need to restart the Ambari server to pick up this new plugin:
@@ -45,17 +67,9 @@ We now need to restart the Ambari server to pick up this new plugin:
 # ambari-server restart
 ----
 
-=== Install a Transport
+=== Install Redis 
 
-We need to have a transport installed. Spring XD currently supports Redis and Kafka for the Ambari installation. 
-
-==== Using Kafka as Transport
-
-Hortonworks HDP supports Kafka installs using Ambari while Pivotal PHD does not. If you use Hortonworks HDP then you should create a Kafka service using Ambari. If you use Pivotal PHD then you need to install Kafka manually first and provide the connection parameters when you create the Spring XD service. Kafka can be downloaded from the link:http://kafka.apache.org/downloads.html[Kafka download] page.
-
-==== Using Redis as Transport
-
-You can build Redis from source or you can use RPMs that are available from the link:https://fedoraproject.org/wiki/EPEL[EPEL] project. Here we'll use the RPM packages. Source is available from the link:http://redis.io/download[Redis download] page. Redis source will also be installed in the `/opt/pivotal/spring-xd/redis` directory.
+You can build Redis from source or you can use RPMs that are available from the link:https://fedoraproject.org/wiki/EPEL[EPEL] project. Source is available from the link:http://redis.io/download[Redis download] page. Redis source will also be installed in the `/opt/pivotal/spring-xd/redis` directory. Here we'll use the RPM packages. 
 
 We need to add a Fedora YUM repo for Redis and then install it:
 
@@ -67,21 +81,21 @@ We need to add a Fedora YUM repo for Redis and then install it:
 # chkconfig redis on
 ----
 
-Modify `\etc\redis.conf`, comment out the `bind` setting:
+Modify `/etc/redis.conf`, change the `bind` setting to be `${hostname}`:
 
 [source]
 ----
 # If you want you can bind a single interface, if the bind option is not
 # specified all the interfaces will listen for incoming connections.
 #
-#bind 127.0.0.1
+bind ${hostname}
 ----
 
 After this we can start Redis:
 
 [source]
 ----
-# sudo service redis start
+# service redis start
 ----
 
 We can now test Redis by using:
@@ -92,33 +106,108 @@ We can now test Redis by using:
 PONG
 ----
 
+=== Optionally Install a different Transport
+
+We need to have a transport installed and we can use the Redis instance that we have installed in the previous step. If you prefer to use a different transport then you can use either RabbitMQ or Kafka. The Redis instance will in that case only be used for the Analytics Repository.
+
+==== Using Kafka as Transport
+
+Hortonworks HDP supports Kafka installs using Ambari while Pivotal PHD does not. If you use Hortonworks HDP then you should create a Kafka service using Ambari. If you use Pivotal PHD then you need to install Kafka manually first and provide the connection parameters when you create the Spring XD service. Kafka can be downloaded from the link:http://kafka.apache.org/downloads.html[Kafka download] page.
+
+==== Using RabbitMQ as Transport
+
+You need to install RabbitMQ manually. You can get more complete instructions from the link:https://www.rabbitmq.com/download.html[Downloading and Installing RabbitMQ] page. Here are some commands that we have used for this:
+
+[source]
+----
+# rpm -Uvh http://download.fedoraproject.org/pub/epel/6/i386/epel-release-6-8.noarch.rpm
+# yum install erlang
+# rpm --import https://www.rabbitmq.com/rabbitmq-signing-key-public.asc
+# wget https://www.rabbitmq.com/releases/rabbitmq-server/v3.5.3/rabbitmq-server-3.5.3-1.noarch.rpm
+# yum install rabbitmq-server-3.5.3-1.noarch.rpm
+----
+
+To allow the `guest` user to connect we need to change the Rabbit config. Create a `/etc/rabbitmq/rabbitmq.config` file and add the following line:
+
+[source]
+----
+[{rabbit, [{loopback_users, []}]}].
+----
+
+Then configure the RabbitMQ server to start on boot and start the service:
+
+[source]
+----
+# chkconfig rabbitmq-server on
+# service rabbitmq-server start
+----
+
+=== Verify Repository Setting for Spring XD using Ambari UI
+
+Open the Ambari UI and log in as `admin`. Select `Admin` -> `Repositories` from the menu. Scroll down until you see the repository settings for Spring XD. They should read:
+
+[width="80%",cols=">s,1m,2m",frame="topbot"]
+|=====================================
+|redhat6 |SPRINGXD-1.2        |http://<yum-server>/SPRINGXD-1.2-1
+|=====================================
+
 === Install Spring XD and create Spring XD service using Ambari UI
 
-Open the Ambari UI and log in as `admin`. From the Dashboard click on "Actions + Add Service" on the left hand side under the list of services. Check "Spring XD" and click `Next ->`. Both master, slave and client will be on the same host since we only have one. Just click `Next ->` a couple of times.
+Open the Ambari UI and log in as `admin`. From the Dashboard click on "Actions + Add Service" on the left hand side under the list of services. Check "Spring XD" and click `Next ->`. Choose your hosts to run Spring XD master, slave and client. We recommend to install the master (xd-admin) and client (xd-shell) on the same host. Then, just click `Next ->` a couple of times.
 
 ==== Customize XD configuration
 
-Under "Customize Services" we might need to make a few changes in the "Advanced springxd-site" section depending on which transport and distribution we are using.
+Under "Customize Services" we will need to make a few changes in the "Advanced springxd-site" section depending on which transport and distribution we are using.
 
-.When using Pivotal HD with Kafka:
+.When using Pivotal HD with Kafka as transport:
 ************************************************
 [width="95%",cols="1m,3m",frame="topbot"]
 |=====================================
 |hsql.server.port            | 9101
 |server.port                 | 9393
-|spring.redis.host           | 
-|spring.redis.port           | 
+|spring.rabbitmq.addresses   |
+|spring.redis.host           | <hostname where redis is running>
+|spring.redis.port           | 6379
 |xd.messagebus.kafka.brokers | <hostname where kafka is running>:<port for kafka:9092>
 |xd.transport                | kafka
 |=====================================
 ************************************************
 
-.When using Redis:
+.When using Hortonworks HDP with Kafka as transport:
 ************************************************
 [width="95%",cols="1m,3m",frame="topbot"]
 |=====================================
 |hsql.server.port            | 9101
 |server.port                 | 9393
+|spring.rabbitmq.addresses   |
+|spring.redis.host           | <hostname where redis is running>
+|spring.redis.port           | 6379
+|xd.messagebus.kafka.brokers | _(leave this blank, Ambari plug-in will fill in the host and port)_
+|xd.transport                | kafka
+|=====================================
+************************************************
+
+.When using RabbitMQ as transport:
+************************************************
+[width="95%",cols="1m,3m",frame="topbot"]
+|=====================================
+|hsql.server.port            | 9101
+|server.port                 | 9393
+|spring.rabbitmq.addresses   | <hostname where rabbitmq is running>:<port for rabbitmq:5672>
+|spring.redis.host           | <hostname where redis is running>
+|spring.redis.port           | 6379
+|xd.messagebus.kafka.brokers | 
+|xd.transport                | rabbit
+|=====================================
+************************************************
+
+.When using Redis as transport:
+************************************************
+[width="95%",cols="1m,3m",frame="topbot"]
+|=====================================
+|hsql.server.port            | 9101
+|server.port                 | 9393
+|spring.rabbitmq.addresses   |
 |spring.redis.host           | <hostname where redis is running>
 |spring.redis.port           | 6379
 |xd.messagebus.kafka.brokers | 
@@ -132,7 +221,7 @@ Review the configuration and then click `Deploy ->`.
 
 ==== Test the Spring XD installation
 
-To start the XD Shell enter the following command:
+To start the XD Shell, enter the following command on the host where the Spring XD client was installed:
 
 [source]
 ----
@@ -183,3 +272,5 @@ xd:>hadoop fs cat /xd/tictoc/*
 ----
 
 NOTE: [green yellow-background big]*That's it -- have fun!*
+
+TIP: Just in case, Spring XD logs are in `var/log/springxd`.
